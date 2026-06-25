@@ -1,34 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../models/movie.dart';
 import '../widgets/movie_card.dart';
+import '../blocs/favorite_bloc.dart';
+import '../blocs/favorite_state.dart';
 import 'movie_detail_page.dart';
 
-class FavoritePage extends StatefulWidget {
-  final Set<String> favoriteTitles;
-  final Function(String) onToggleFavorite;
+class FavoritePage extends StatelessWidget {
+  const FavoritePage({super.key});
 
-  const FavoritePage({
-    super.key,
-    required this.favoriteTitles,
-    required this.onToggleFavorite,
-  });
-
-  @override
-  State<FavoritePage> createState() => _FavoritePageState();
-}
-
-class _FavoritePageState extends State<FavoritePage> {
   @override
   Widget build(BuildContext context) {
-    final favMovies = dummyMovies.where((m) => widget.favoriteTitles.contains(m.title)).toList();
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Favorite Movies', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: favMovies.isEmpty
-          ? Center(
+      body: BlocBuilder<FavoriteBloc, FavoriteState>(
+        builder: (context, state) {
+          final favMovies = dummyMovies.where((m) => state.favoriteTitles.contains(m.title)).toList();
+
+          if (favMovies.isEmpty) {
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -49,34 +42,32 @@ class _FavoritePageState extends State<FavoritePage> {
                   ),
                 ],
               ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              itemCount: favMovies.length,
-              itemBuilder: (context, index) {
-                final movie = favMovies[index];
-                return MovieCard(
-                  movie: movie,
-                  // Parameter isFavorite tidak dikirim agar icon heart disembunyikan
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => MovieDetailPage(
-                          movie: movie,
-                          initialFavorite: widget.favoriteTitles.contains(movie.title),
-                          onToggleFavorite: (title) {
-                            widget.onToggleFavorite(title);
-                            // Refresh state layar ini saat list di-unfavorite dari dalam layar detail
-                            setState(() {});
-                          },
-                        ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            itemCount: favMovies.length,
+            itemBuilder: (context, index) {
+              final movie = favMovies[index];
+              return MovieCard(
+                movie: movie,
+                // Parameter isFavorite tidak dikirim agar icon heart disembunyikan di FavoritePage
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MovieDetailPage(
+                        movie: movie,
                       ),
-                    );
-                  },
-                );
-              },
-            ),
+                    ),
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

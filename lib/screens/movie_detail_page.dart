@@ -1,44 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../models/movie.dart';
+import '../blocs/favorite_bloc.dart';
+import '../blocs/favorite_event.dart';
+import '../blocs/favorite_state.dart';
 
-class MovieDetailPage extends StatefulWidget {
+class MovieDetailPage extends StatelessWidget {
   final Movie movie;
-  final bool initialFavorite;
-  final Function(String) onToggleFavorite;
 
   const MovieDetailPage({
     super.key,
     required this.movie,
-    required this.initialFavorite,
-    required this.onToggleFavorite,
   });
-
-  @override
-  State<MovieDetailPage> createState() => _MovieDetailPageState();
-}
-
-class _MovieDetailPageState extends State<MovieDetailPage> {
-  late bool isFavorite;
-
-  @override
-  void initState() {
-    super.initState();
-    isFavorite = widget.initialFavorite;
-  }
-
-  void _toggleFavorite() {
-    setState(() {
-      isFavorite = !isFavorite;
-    });
-    // Memicu fungsi callback parent agar state list utama tersinkronisasi
-    widget.onToggleFavorite(widget.movie.title);
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.movie.title),
+        title: Text(movie.title),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: SingleChildScrollView(
@@ -46,7 +25,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Image.network(
-              widget.movie.posterUrl,
+              movie.posterUrl,
               height: 450,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
@@ -68,25 +47,32 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                     children: [
                       Expanded(
                         child: Text(
-                          widget.movie.title,
+                          movie.title,
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                         ),
                       ),
-                      IconButton(
-                        icon: Icon(
-                          isFavorite ? Icons.favorite : Icons.favorite_border,
-                          color: isFavorite ? Colors.red : Colors.grey,
-                          size: 32,
-                        ),
-                        onPressed: _toggleFavorite,
+                      BlocBuilder<FavoriteBloc, FavoriteState>(
+                        builder: (context, state) {
+                          final isFavorite = state.favoriteTitles.contains(movie.title);
+                          return IconButton(
+                            icon: Icon(
+                              isFavorite ? Icons.favorite : Icons.favorite_border,
+                              color: isFavorite ? Colors.red : Colors.grey,
+                              size: 32,
+                            ),
+                            onPressed: () {
+                              context.read<FavoriteBloc>().add(ToggleFavoriteEvent(movie.title));
+                            },
+                          );
+                        },
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '${widget.movie.year} • ${widget.movie.genre}',
+                    '${movie.year} • ${movie.genre}',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: Colors.grey.shade700,
                         ),
@@ -97,7 +83,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                       const Icon(Icons.star, color: Colors.amber, size: 24),
                       const SizedBox(width: 4),
                       Text(
-                        widget.movie.rating.toString(),
+                        movie.rating.toString(),
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
@@ -113,7 +99,7 @@ class _MovieDetailPageState extends State<MovieDetailPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    widget.movie.description,
+                    movie.description,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           height: 1.5,
                         ),

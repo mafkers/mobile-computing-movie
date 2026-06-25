@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../models/movie.dart';
 import '../widgets/movie_card.dart';
+import '../repositories/movie_repository.dart';
+import '../blocs/favorite_bloc.dart';
+import '../blocs/favorite_event.dart';
+import '../blocs/favorite_state.dart';
 import 'movie_detail_page.dart';
 import 'favorite_page.dart';
 
@@ -12,16 +17,13 @@ class MovieCatalogPage extends StatefulWidget {
 }
 
 class _MovieCatalogPageState extends State<MovieCatalogPage> {
-  final Set<String> favoriteTitles = {};
+  late Future<List<Movie>> _moviesFuture;
 
-  void _toggleFavorite(String title) {
-    setState(() {
-      if (favoriteTitles.contains(title)) {
-        favoriteTitles.remove(title);
-      } else {
-        favoriteTitles.add(title);
-      }
-    });
+  @override
+  void initState() {
+    super.initState();
+    // Initialize the future in initState so it doesn't refetch on rebuild
+    _moviesFuture = MovieRepository().getMovies();
   }
 
   @override
@@ -37,49 +39,59 @@ class _MovieCatalogPageState extends State<MovieCatalogPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.favorite, color: Colors.red),
-            onPressed: () async {
-              await Navigator.push(
+            onPressed: () {
+              Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => FavoritePage(
-                    favoriteTitles: favoriteTitles,
-                    onToggleFavorite: _toggleFavorite,
-                  ),
+                  builder: (context) => const FavoritePage(),
                 ),
               );
-              // Sinkronisasi icon heart ketika user kembali dari FavoritePage
-              setState(() {});
             },
           ),
           const SizedBox(width: 8),
         ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        itemCount: dummyMovies.length,
-        itemBuilder: (context, index) {
-          final movie = dummyMovies[index];
-          final isFavorite = favoriteTitles.contains(movie.title);
-          
-          return MovieCard(
-            movie: movie,
-            isFavorite: isFavorite,
-            onFavoriteTap: () {
-              _toggleFavorite(movie.title);
-            },
-            onTap: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => MovieDetailPage(
+      body: FutureBuilder<List<Movie>>(
+        future: _moviesFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('No movies found.'));
+          }
+
+          final movies = snapshot.data!;
+
+          return BlocBuilder<FavoriteBloc, FavoriteState>(
+            builder: (context, state) {
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                itemCount: movies.length,
+                itemBuilder: (context, index) {
+                  final movie = movies[index];
+                  final isFavorite = state.favoriteTitles.contains(movie.title);
+
+                  return MovieCard(
                     movie: movie,
-                    initialFavorite: isFavorite,
-                    onToggleFavorite: _toggleFavorite,
-                  ),
-                ),
+                    isFavorite: isFavorite,
+                    onFavoriteTap: () {
+                      context.read<FavoriteBloc>().add(ToggleFavoriteEvent(movie.title));
+                    },
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MovieDetailPage(
+                            movie: movie,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
               );
-              // Sinkronisasi icon heart ketika user kembali dari DetailPage
-              setState(() {});
             },
           );
         },

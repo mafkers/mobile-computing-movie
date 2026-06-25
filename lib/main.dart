@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'blocs/favorite_bloc.dart';
 import 'screens/movie_catalog_page.dart';
 
 void main() {
@@ -10,14 +11,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Movie Catalog',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-        useMaterial3: true,
+    return BlocProvider(
+      create: (context) => FavoriteBloc(),
+      child: MaterialApp(
+        title: 'Movie Catalog',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+          useMaterial3: true,
+        ),
+        home: const MovieCatalogPage(),
       ),
-      home: const MovieCatalogPage(),
     );
   }
 }
