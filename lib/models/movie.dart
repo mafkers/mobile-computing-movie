@@ -14,6 +14,67 @@ class Movie {
     required this.posterUrl,
     required this.description,
   });
+
+  // Untuk parsing dari JSON API (TVMaze)
+  factory Movie.fromJson(Map<String, dynamic> json) {
+    final show = json.containsKey('show') ? json['show'] : json;
+    
+    int parsedYear = 0;
+    if (show['premiered'] != null && show['premiered'].toString().length >= 4) {
+      parsedYear = int.tryParse(show['premiered'].toString().substring(0, 4)) ?? 0;
+    }
+
+    String parsedGenre = '';
+    if (show['genres'] != null && (show['genres'] as List).isNotEmpty) {
+      parsedGenre = (show['genres'] as List).join(', ');
+    }
+
+    double parsedRating = 0.0;
+    if (show['rating'] != null && show['rating']['average'] != null) {
+      parsedRating = (show['rating']['average'] as num).toDouble();
+    }
+
+    String parsedImage = 'https://via.placeholder.com/500x750.png?text=No+Image';
+    if (show['image'] != null && show['image']['medium'] != null) {
+      parsedImage = show['image']['medium'];
+    }
+
+    String parsedDesc = show['summary'] ?? 'No description available.';
+    parsedDesc = parsedDesc.replaceAll(RegExp(r'<[^>]*>|&[^;]+;'), '');
+
+    return Movie(
+      title: show['name'] ?? 'Unknown',
+      year: parsedYear,
+      genre: parsedGenre,
+      rating: parsedRating,
+      posterUrl: parsedImage,
+      description: parsedDesc,
+    );
+  }
+
+  // Untuk menyimpan ke SQLite Local Storage
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'year': year,
+      'genre': genre,
+      'rating': rating,
+      'posterUrl': posterUrl,
+      'description': description,
+    };
+  }
+
+  // Untuk membaca dari SQLite Local Storage
+  factory Movie.fromMap(Map<String, dynamic> map) {
+    return Movie(
+      title: map['title'] ?? '',
+      year: map['year'] ?? 0,
+      genre: map['genre'] ?? '',
+      rating: map['rating'] != null ? (map['rating'] as num).toDouble() : 0.0,
+      posterUrl: map['posterUrl'] ?? '',
+      description: map['description'] ?? '',
+    );
+  }
 }
 
 final List<Movie> dummyMovies = [
